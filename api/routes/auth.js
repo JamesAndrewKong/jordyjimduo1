@@ -8,7 +8,7 @@ router.post('/login', (req, res, next) => {
     const userName = req.body.userName;
     const password = req.body.password;
 
-    axios.get(`${process.env.USER_SERVICE_URL}/username/${userName}`)
+    axios.get(`${process.env.USER_SERVICE_URL}/users/userName/${userName}`)
         .then(response => {
             const user = response.data;
 

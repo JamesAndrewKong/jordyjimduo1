@@ -53,6 +53,20 @@ app.post('/users', async (req, res, next) => {
         .catch(next);
 });
 
+app.get('/users/username/:userName', async (req, res, next) => {
+    try {
+        
+        const user = await User.findOne({ userName: req.params.userName });
+        if (user) {
+            res.json(user);
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
+    } catch (err) {
+        next(err);
+    }
+});
+
 // error handler
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
