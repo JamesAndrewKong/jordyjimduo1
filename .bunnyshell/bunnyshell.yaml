@@ -4,76 +4,93 @@ type: primary
 urlHandle: vwwyup
 components:
     -
-        kind: Application
-        name: frontend
-        gitRepo: 'https://github.com/JamesAndrewKong/jordyjimduo1.git'
-        gitBranch: main
-        gitApplicationPath: frontend
+        kind: Service
+        name: attempt-service
         dockerCompose:
-            build:
-                context: ./frontend
-                dockerfile: Dockerfile
+            command:
+                - bash
+                - '-c'
+                - 'npm install && npm run watch'
             environment:
-                API_URL: ''
+                APP_PORT: '3000'
+                BROKER_URL: 'amqp://messagebus:5672'
+                DB_PASSWORD: week4password
+                DB_URL: 'mongodb://mydatabase:27017/attempts'
+                DB_USERNAME: week4username
+            image: 'node:20.11.1'
+            restart: unless-stopped
+            working_dir: /var/www/html
+    -
+        kind: Service
+        name: image-service
+        dockerCompose:
+            command:
+                - bash
+                - '-c'
+                - 'npm install && npm run watch'
+            environment:
+                APP_PORT: '3000'
+                BROKER_URL: 'amqp://messagebus:5672'
+                DB_PASSWORD: week4password
+                DB_URL: 'mongodb://mydatabase:27017/images'
+                DB_USERNAME: week4username
+                IMAGGA_EXT_API_KEY: ''
+                IMAGGA_EXT_API_SECRET: ''
+            image: 'node:20.11.1'
+            restart: unless-stopped
+            working_dir: /var/www/html
+    -
+        kind: Service
+        name: mailhog
+        dockerCompose:
+            image: 'mailhog/mailhog:latest'
             ports:
-                - '80:80'
-        hosts:
-            -
-                hostname: 'frontend-{{ env.base_domain }}'
-                path: /
-                servicePort: 80
+                - '8004:8025'
+                - '1025:1025'
+            restart: unless-stopped
     -
         kind: Service
         name: messagebus
         dockerCompose:
-            hostname: messagebus
             image: 'rabbitmq:latest'
-            labels:
-                NAME: messagebus
             ports:
-                - '4369:4369'
-                - '5671:5671'
-                - '5672:5672'
-                - '25672:25672'
-                - '15671:15671'
                 - '15672:15672'
-        hosts:
-            -
-                hostname: 'messagebus-{{ env.base_domain }}'
-                path: /
-                servicePort: 4369
+            restart: unless-stopped
     -
         kind: Database
         name: mongodb-exporter
         dockerCompose:
             environment:
-                MONGODB_URI: 'mongodb://mydatabase:27017'
+                MONGODB_URI: 'mongodb://week4username:week4password@mydatabase:27017'
             image: 'bitnami/mongodb-exporter:latest'
             ports:
                 - '9216:9216'
+            restart: unless-stopped
     -
-        kind: Application
+        kind: Service
         name: myapi
-        gitRepo: 'https://github.com/JamesAndrewKong/jordyjimduo1.git'
-        gitBranch: main
-        gitApplicationPath: api
         dockerCompose:
-            build:
-                context: ./api
-                dockerfile: Dockerfile
+            command:
+                - bash
+                - '-c'
+                - 'npm install && npm run watch'
             environment:
-                MONGO_URL: 'mongodb://mydatabase:27017'
+                ATTEMPT_SERVICE_URL: 'http://attempt-service:3000'
+                IMAGE_SERVICE_URL: 'http://image-service:3000'
+                JWT_SECRET: ''
+                TARGET_SERVICE_URL: 'http://target-service:4000'
+                USER_SERVICE_URL: 'http://service-user:3000'
+            image: 'node:20.11.1'
             ports:
-                - '3000:3000'
-        hosts:
-            -
-                hostname: 'myapi-{{ env.base_domain }}'
-                path: /
-                servicePort: 3000
+                - '8000:3000'
+            working_dir: /var/www/html
     -
         kind: Database
         name: mydatabase
         dockerCompose:
+            environment:
+                MONGO_INITDB_ROOT_PASSWORD: week4password
+                MONGO_INITDB_ROOT_USERNAME: week4username
             image: 'mongo:latest'
             ports:
                 - '27017:27017'
@@ -84,22 +101,50 @@ components:
                 mount: /data/db
                 subPath: ''
     -
-        kind: Application
+        kind: Service
         name: prometheus
-        gitRepo: 'https://github.com/JamesAndrewKong/jordyjimduo1.git'
-        gitBranch: main
-        gitApplicationPath: prometheus
         dockerCompose:
-            build:
-                context: ./prometheus
-                dockerfile: Dockerfile
+            command:
+                - '--web.enable-lifecycle'
+                - '--config.file=/etc/prometheus/config.yml'
+            image: 'prom/prometheus:latest'
             ports:
                 - '9090:9090'
-        hosts:
-            -
-                hostname: 'prometheus-{{ env.base_domain }}'
-                path: /
-                servicePort: 9090
+            restart: unless-stopped
+    -
+        kind: Service
+        name: target-service
+        dockerCompose:
+            command:
+                - bash
+                - '-c'
+                - 'npm install && npm run watch'
+            environment:
+                APP_PORT: '3000'
+                BROKER_URL: 'amqp://messagebus:5672'
+                DB_PASSWORD: week4password
+                DB_URL: 'mongodb://mydatabase:27017/targets'
+                DB_USERNAME: week4username
+            image: 'node:20.11.1'
+            restart: unless-stopped
+            working_dir: /var/www/html
+    -
+        kind: Service
+        name: user-service
+        dockerCompose:
+            command:
+                - bash
+                - '-c'
+                - 'npm install && npm run watch'
+            environment:
+                APP_PORT: '3000'
+                BROKER_URL: 'amqp://messagebus:5672'
+                DB_PASSWORD: week4password
+                DB_URL: 'mongodb://mydatabase:27017/users'
+                DB_USERNAME: week4username
+            image: 'node:20.11.1'
+            restart: unless-stopped
+            working_dir: /var/www/html
 volumes:
     -
         name: mongo-data
