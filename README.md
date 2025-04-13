@@ -1,4 +1,4 @@
-[![API Tests and Coverage](https://github.com/JamesAndrewKong/jordyjimduo1/actions/workflows/CI-API.yml/badge.svg?branch=main)](https://github.com/JamesAndrewKong/jordyjimduo1/actions/workflows/CI-API.yml)
+[![API Tests and Coverage](https://github.com/JamesAndrewKong/jordyjimduo1/actions/workflows/CI-API.yml/badge.svg)](https://github.com/JamesAndrewKong/jordyjimduo1/actions/workflows/CI-API.yml)
 
 [![Node.js CI](https://github.com/JamesAndrewKong/jordyjimduo1/actions/workflows/node.js.yml/badge.svg)](https://github.com/JamesAndrewKong/jordyjimduo1/actions/workflows/node.js.yml)
 
