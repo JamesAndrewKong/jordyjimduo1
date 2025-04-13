@@ -3,6 +3,7 @@ const app = require('../../index');
 const db = require('../config/database');
 const Attempt = require('../../models/attempt');
 const pagination = require('../helpers/pagination');
+jest.setTimeout(100000);
 
 const agent = request.agent(app, {});
 

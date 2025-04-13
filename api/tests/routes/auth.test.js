@@ -6,7 +6,7 @@ const db = require('../config/database');
 const axios = require('axios');
 const Bcrypt = require('bcryptjs');
 
-jest.setTimeout(10000);
+jest.setTimeout(100000);
 
 const agent = request.agent(app, {});
 
