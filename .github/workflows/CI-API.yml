@@ -2,11 +2,9 @@ name: API Tests and Coverage
 
 on:
   push:
-    paths:
-      - 'api/**'
+    branches: main
   pull_request:
-    branches:
-      - main
+    branches: main
 
 jobs:
   test_and_coverage:
