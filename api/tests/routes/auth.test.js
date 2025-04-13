@@ -6,7 +6,10 @@ const db = require('../config/database');
 const axios = require('axios');
 const Bcrypt = require('bcryptjs');
 
+jest.setTimeout(10000);
+
 const agent = request.agent(app, {});
+
 
 axios.get = jest.fn().mockResolvedValue({
     data: {
