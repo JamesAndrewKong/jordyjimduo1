@@ -11,7 +11,7 @@ on:
 
 jobs:
   test_and_coverage:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       working-directory: ./Services/ImageService
     

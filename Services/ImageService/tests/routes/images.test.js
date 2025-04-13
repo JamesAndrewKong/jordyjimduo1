@@ -2,7 +2,6 @@ const request = require('supertest');
 const app = require('../../index');
 const db = require('../config/database');
 const Image = require('../../models/image');
-jest.setTimeout(100000);
 
 const agent = request.agent(app, {});
 
