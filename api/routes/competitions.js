@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const competitionService = require('../services/competitionservice');
 
 // Route to fetch all competitions
 router.get('/', async (req, res, next) => {
