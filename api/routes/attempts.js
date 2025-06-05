@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const attemptService = require('../services/attemptService');
+const attemptService = require('../services/attemptservice');
 const paginate = require('../helpers/paginatedResponse');
 const createError = require('http-errors');
 
