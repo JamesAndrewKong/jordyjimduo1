@@ -1,5 +1,6 @@
 const axios = require('axios');
-const withCircuitBreaker = require('../helpers/circuitBreakerHelper'); // pad aanpassen indien nodig
+const withCircuitBreaker = require('../helpers/circuitBreakerHelper');
+const publishToQueue = require('../helpers/rabbitPublisher');
 
 async function getUsers(page, perPage) {
     const res = await axios.get(`${process.env.USER_SERVICE_URL}/users`, { params: { page, perPage } });
@@ -12,8 +13,8 @@ async function getUserById(id) {
 }
 
 async function createUser(body) {
-    const res = await axios.post(`${process.env.USER_SERVICE_URL}/users`, body);
-    return res.data;
+    await publishToQueue('user.create', body);
+    return { message: 'User creation enqueued' };
 }
 
 async function getTargetsByUser(userId, page, perPage) {
@@ -33,7 +34,7 @@ async function getAttemptsByUser(userId, page, perPage) {
 module.exports = {
     getUsers: withCircuitBreaker(getUsers),
     getUserById: withCircuitBreaker(getUserById),
-    createUser: withCircuitBreaker(createUser),
+    createUser,
     getTargetsByUser: withCircuitBreaker(getTargetsByUser),
     getAttemptsByUser: withCircuitBreaker(getAttemptsByUser),
 };

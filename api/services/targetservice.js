@@ -1,5 +1,6 @@
 const axios = require('axios');
-const withCircuitBreaker = require('../helpers/circuitBreakerHelper'); // pas aan als nodig
+const withCircuitBreaker = require('../helpers/circuitBreakerHelper');
+const publishToQueue = require('../helpers/rabbitPublisher');
 
 async function getTargets(page, perPage) {
     const response = await axios.get(`${process.env.TARGET_SERVICE_URL}/targets`, {
@@ -19,14 +20,13 @@ async function getTargetsByLocation(location) {
 }
 
 async function createTarget(data) {
-    const response = await axios.post(`${process.env.TARGET_SERVICE_URL}/targets`, data);
-    return response.data;
+    await publishToQueue('target.create', data);
+    return { message: 'Target creation enqueued' };
 }
 
 async function deleteTarget(id, userId) {
-    await axios.delete(`${process.env.TARGET_SERVICE_URL}/targets/${id}`, {
-        data: { userId },
-    });
+    await publishToQueue('target.delete', { id, userId });
+    return { message: 'Target deletion enqueued' };
 }
 
 async function getAttemptsForTarget(targetId, page, perPage) {
@@ -45,7 +45,7 @@ module.exports = {
     getTargets: withCircuitBreaker(getTargets),
     getTargetById: withCircuitBreaker(getTargetById),
     getTargetsByLocation: withCircuitBreaker(getTargetsByLocation),
-    createTarget: withCircuitBreaker(createTarget),
-    deleteTarget: withCircuitBreaker(deleteTarget),
+    createTarget,
+    deleteTarget,
     getAttemptsForTarget: withCircuitBreaker(getAttemptsForTarget),
 };

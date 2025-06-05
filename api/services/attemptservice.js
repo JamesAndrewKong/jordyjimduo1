@@ -1,5 +1,6 @@
 const axios = require('axios');
 const withCircuitBreaker = require('../helpers/circuitBreakerHelper');
+const publishToQueue = require('../helpers/rabbitPublisher');
 
 async function getAttempts(page, perPage, userId, targetId) {
     const params = { page, perPage };
@@ -21,21 +22,21 @@ async function getTargetById(targetId) {
 }
 
 async function createAttempt(body) {
-    const res = await axios.post(`${process.env.ATTEMPT_SERVICE_URL}/attempts`, body);
-    return res.data;
+    await publishToQueue('attempt.create', body);
+
+    return { message: 'Attempt creation enqueued' };
 }
 
 async function deleteAttempt(id, userId, userRole) {
-    const res = await axios.delete(`${process.env.ATTEMPT_SERVICE_URL}/attempts/${id}`, {
-        data: { userId, userRole },
-    });
-    return res.data;
+    await publishToQueue('attempt.delete', { id, userId, userRole });
+
+    return { message: 'Attempt deletion enqueued' };
 }
 
 module.exports = {
     getAttempts: withCircuitBreaker(getAttempts),
     getAttemptById: withCircuitBreaker(getAttemptById),
     getTargetById: withCircuitBreaker(getTargetById),
-    createAttempt: withCircuitBreaker(createAttempt),
-    deleteAttempt: withCircuitBreaker(deleteAttempt),
+    createAttempt,
+    deleteAttempt,
 };

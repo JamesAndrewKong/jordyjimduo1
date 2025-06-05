@@ -1,17 +1,11 @@
 const axios = require('axios');
 const fs = require('fs');
-const withCircuitBreaker = require('../helpers/circuitBreakerHelper'); // pas pad aan
-
-const breakerOptions = {
-  timeout: 5000,
-  errorThresholdPercentage: 50,
-  resetTimeout: 10000,
-};
+const withCircuitBreaker = require('../helpers/circuitBreakerHelper');
 
 async function getTags(imageData) {
   const response = await axios.post('https://api.imagga.com/v2/tags', imageData, {
     headers: {
-      'Authorization': `Basic ${Buffer.from(process.env.IMAGGA_API_KEY + ':').toString('base64')}`,
+      Authorization: `Basic ${Buffer.from(process.env.IMAGGA_API_KEY + ':').toString('base64')}`,
       'Content-Type': 'application/octet-stream',
     },
   });
@@ -23,8 +17,8 @@ async function getTarget(targetId) {
   return response.data;
 }
 
-const getTagsWithBreaker = withCircuitBreaker(getTags, breakerOptions);
-const getTargetWithBreaker = withCircuitBreaker(getTarget, breakerOptions);
+const getTagsWithBreaker = withCircuitBreaker(getTags);
+const getTargetWithBreaker = withCircuitBreaker(getTarget);
 
 async function analyzeImage(imagePath, targetId) {
   const target = await getTargetWithBreaker(targetId);

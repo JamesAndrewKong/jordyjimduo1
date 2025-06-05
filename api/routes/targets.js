@@ -3,7 +3,6 @@ const router = express.Router();
 const targetService = require('../services/targetservice');
 const paginate = require('../helpers/paginatedResponse');
 const adminRole = require('../helpers/adminRole');
-const createError = require('http-errors');
 
 router.get('/', async (req, res, next) => {
     try {
