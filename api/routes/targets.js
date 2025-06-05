@@ -1,86 +1,63 @@
 const express = require('express');
 const router = express.Router();
-const axios = require('axios');
+const targetService = require('../services/targetservice');
 const paginate = require('../helpers/paginatedResponse');
 const adminRole = require('../helpers/adminRole');
 const createError = require('http-errors');
 
 router.get('/', async (req, res, next) => {
-    axios.get(`${process.env.TARGET_SERVICE_URL}/targets`, {
-        params: {
-            page: req.query.page,
-            perPage: req.query.perPage,
-        },
-    })
-        .then(response => res.json(paginate(response.data, req)))
-        .catch(next);
+    try {
+        const data = await targetService.getTargets(req.query.page, req.query.perPage);
+        res.json(paginate(data, req));
+    } catch (error) {
+        next(error);
+    }
 });
 
-router.get('/:id', (req, res, next) => {
-    axios.get(`${process.env.TARGET_SERVICE_URL}/targets/${req.params.id}`)
-        .then(response => res.json(response.data))
-        .catch(next);
+router.get('/:id', async (req, res, next) => {
+    try {
+        const data = await targetService.getTargetById(req.params.id);
+        res.json(data);
+    } catch (error) {
+        next(error);
+    }
 });
 
 router.get('/attempts/:id', adminRole, async (req, res, next) => {
     try {
-        const {data} = await axios.get(`${process.env.TARGET_SERVICE_URL}/targets/${req.params.id}`);
-
-        axios.get(`${process.env.ATTEMPT_SERVICE_URL}/attempts`, {
-            params: {
-                targetId: data._id,
-                page: req.query.page,
-                perPage: req.query.perPage,
-            },
-        })
-            .then(response => res.json(paginate(response.data, req)))
-            .catch(next);
+        const data = await targetService.getAttemptsForTarget(req.params.id, req.query.page, req.query.perPage);
+        res.json(paginate(data, req));
     } catch (error) {
-        next(createError('Target not found', 404));
+        next(error);
     }
 });
 
-router.get('/location/:location', (req, res, next) => {
-    axios.get(`${process.env.TARGET_SERVICE_URL}/targets/location/${req.params.location}`)
-        .then(response => res.json(response.data))
-        .catch(next);
+router.get('/location/:location', async (req, res, next) => {
+    try {
+        const data = await targetService.getTargetsByLocation(req.params.location);
+        res.json(data);
+    } catch (error) {
+        next(error);
+    }
 });
 
-router.post('/', adminRole, (req, res, next) => {
-    req.body.userId = req.user._id;
-
-    axios.post(`${process.env.TARGET_SERVICE_URL}/targets`, req.body)
-        .then(response => res.status(201).json(response.data))
-        .catch(next);
+router.post('/', adminRole, async (req, res, next) => {
+    try {
+        req.body.userId = req.user._id;
+        const data = await targetService.createTarget(req.body);
+        res.status(201).json(data);
+    } catch (error) {
+        next(error);
+    }
 });
-
-// router.post('/attempts/:id', adminRole, async (req, res, next) => {
-//     try {
-//         const {data} = await axios.get(`${process.env.TARGET_SERVICE_URL}/targets/${req.params.id}`);
-
-//         const requestData = {
-//             ...req.body,
-//             userId: req.user._id,
-//             targetId: data._id,
-//             targetImageId: data.imageId,
-//         };
-
-//         axios.post(`${process.env.ATTEMPT_SERVICE_URL}/attempts`, requestData)
-//             .then(response => res.status(201).json(response.data))
-//             .catch(next);
-//     } catch (error) {
-//         next(createError('Target not found', 404));
-//     }
-// });
 
 router.delete('/:id', adminRole, async (req, res, next) => {
-    axios.delete(`${process.env.TARGET_SERVICE_URL}/targets/${req.params.id}`,{
-            data: {
-                userId: req.user._id,
-            },
-        })
-        .then(() => res.status(204).json([]))
-        .catch(next);
+    try {
+        await targetService.deleteTarget(req.params.id, req.user._id);
+        res.status(204).json([]);
+    } catch (error) {
+        next(error);
+    }
 });
 
 module.exports = router;
