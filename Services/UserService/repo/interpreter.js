@@ -4,23 +4,15 @@ class Interpreter{
         this.repo = repo;
     }
 
-    async interpret(){ return new Promise((resolve, reject) => {
-        try{
-            this.#action();
-            resolve('interpret message from broker was succesfully processed');
-        }catch(err){
-            reject(err);
-        }
-    });
+    async interpret() {
+        return this.#action();
     }
 
-    #action() { return new Promise((resolve, reject) => {
-        try {
-            resolve(this.repo[this.payload.action](this.payload.value));
-        } catch (err) {
-            reject(err);
+    async #action() {
+        if (!this.repo || typeof this.repo[this.payload.action] !== 'function') {
+            throw new Error(`Invalid action: ${this.payload.action}`);
         }
-    });
+        return await this.repo[this.payload.action](this.payload.value);
     }
 }
 
