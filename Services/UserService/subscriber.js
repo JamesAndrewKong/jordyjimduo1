@@ -31,7 +31,7 @@ const subscribe = async () => {
 
         console.log('[*] Subscriber: Waiting for messages on queue:', q.queue);
 
-        channel.consume(q.queue, async (message) => {
+        await channel.consume(q.queue, async (message) => {
             try {
                 const content = message.content.toString();
                 console.log('Subscriber: Received message:', content);
