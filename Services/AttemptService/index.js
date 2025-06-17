@@ -4,7 +4,7 @@ const paginate = require('./helpers/paginatedResponse');
 const repo = require('./repo/attemptRepo');
 const PayLoadCreator = require('./repo/payloadCreator');
 const pub = require('./publisher');
-const sub = require('./subscriber');
+require('./subscriber');
 const promBundle = require('express-prom-bundle');
 
 const metricsMiddleware = promBundle({
@@ -24,7 +24,6 @@ const http = require('http');
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({extended: false}));
-
 app.use(metricsMiddleware);
 
 app.get('/attempts', async (req, res, next) => {
@@ -67,7 +66,7 @@ app.post('/attempts', async (req, res, next) => {
         let value = payloadCreator.getPayload();
         pub(value, 'image');
     } catch (err) {
-        pub({from: 'target-service_index', error: err}, 'report');
+        pub({from: 'attempt-service_index', error: err}, 'report');
     }
 });
 
@@ -91,8 +90,6 @@ app.delete('/attempts/:id', async (req, res, next) => {
     }
 });
 
-// error handler
-// eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
     pub({from: 'attempt-service_index', error: err}, 'report');
 

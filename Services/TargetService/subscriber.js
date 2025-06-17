@@ -8,15 +8,13 @@ let channel;
 
 const subscribe = async () => {
     try {
-        let msg;
-
         let connection;
         try {
             connection = await broker;
         } catch (error) {
             if (process.env.NODE_ENV === 'test') return;
 
-            console.log('Could not make queue connection, retrying in 10 seconds...');
+            console.log('RabbitMQ subscribe error: retrying in 10s');
             broker = amqplib.connect(process.env.BROKER_URL);
             setTimeout(() => subscribe(), 10000);
             return;
@@ -24,31 +22,32 @@ const subscribe = async () => {
 
         if (!connection) return;
 
-        if(channel === undefined){
+        if (!channel) {
             channel = await connection.createChannel();
         }
 
-        await channel.assertExchange('EA', 'direct', {durable: true});
+        await channel.assertExchange('EA', 'direct', { durable: true });
+        const q = await channel.assertQueue('target_queue', { durable: false });
 
-        const q = await channel.assertQueue('target_queue', {exclusive: false});
-
-        console.log('[*] Waiting for messages...');
+        console.log('[*] TargetService waiting for messages on queue: target_queue');
 
         await channel.bindQueue(q.queue, 'EA', 'target');
 
-        channel.consume(q.queue, message => {
-            msg = JSON.parse(message.content);
-            const interpreter = new Interpreter(msg, targetRepo);
+        await channel.consume(q.queue, async (message) => {
+            if (message === null) return;
+
             try {
-                interpreter.interpret();
+                const msg = JSON.parse(message.content.toString());
+                const interpreter = new Interpreter(msg, targetRepo);
+                await interpreter.interpret();
             } catch (error) {
-                pub({from: 'target-service_subscriber', error}, 'report');
+                await pub({ from: 'target-service_subscriber', error }, 'report');
             }
 
             channel.ack(message);
         });
     } catch (error) {
-        pub({from: 'target-service_subscriber', error}, 'report');
+        await pub({ from: 'target-service_subscriber', error }, 'report');
     }
 };
 

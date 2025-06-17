@@ -4,7 +4,6 @@ const logger = require('morgan');
 const promBundle = require('express-prom-bundle');
 
 const User = require('./models/user');
-const repo = require('./repo/userRepo');
 const paginate = require('./helpers/paginatedResponse');
 const pub = require('./publisher');
 
@@ -71,7 +70,7 @@ app.get('/users/username/:userName', async (req, res, next) => {
     }
 });
 
-app.use((err, req, res, next) => {
+app.use((err, req, res) => {
     pub({ from: 'user-service_index', error: err }, 'report');
     res.status(err.status || 500).json(err);
 });

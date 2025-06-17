@@ -9,7 +9,7 @@
         "lint": "eslint ."
     },
     "dependencies": {
-        "amqplib": "^0.10.4",
+        "amqplib": "^0.10.8",
         "cookie-parser": "~1.4.4",
         "debug": "~2.6.9",
         "dotenv": "^16.0.0",
