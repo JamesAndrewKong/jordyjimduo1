@@ -13,9 +13,9 @@ const subscribe = async () => {
             connection = await broker;
         } catch (error) {
             if (process.env.NODE_ENV === 'test') return;
-            console.log('Subscriber: Could not connect to broker, retrying in 10 seconds...');
+            console.log('Subscriber: Could not connect to broker, retrying in 1 second...');
             broker = amqplib.connect(process.env.BROKER_URL);
-            setTimeout(subscribe, 10000);
+            setTimeout(subscribe, 1000);
             return;
         }
 
@@ -26,7 +26,7 @@ const subscribe = async () => {
         }
 
         await channel.assertExchange('EA', 'direct', { durable: true });
-        const q = await channel.assertQueue('user_queue', { exclusive: false });
+        const q = await channel.assertQueue('user_queue', { durable: true });
         await channel.bindQueue(q.queue, 'EA', 'user');
 
         console.log('[*] Subscriber: Waiting for messages on queue:', q.queue);
@@ -54,4 +54,4 @@ const subscribe = async () => {
     }
 };
 
-module.exports = subscribe();
+module.exports = subscribe;

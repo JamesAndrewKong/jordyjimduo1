@@ -8,7 +8,8 @@ const paginate = require('./helpers/paginatedResponse');
 const pub = require('./publisher');
 
 require('./database');
-require('./subscriber');
+const startSubscriber = require('./subscriber');
+startSubscriber();
 
 const app = express();
 

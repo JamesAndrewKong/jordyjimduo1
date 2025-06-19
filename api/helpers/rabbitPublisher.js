@@ -13,11 +13,16 @@ async function connect() {
 }
 
 async function publishToQueue(routingKey, msgObj) {
-    try {
-        const channel = await connect();
-        channel.publish('EA', routingKey, Buffer.from(JSON.stringify(msgObj)), { persistent: true });
-    } catch (error) {
-        console.error('RabbitMQ publish error:', error);
+    const channel = await connect();
+    const success = channel.publish(
+        'EA',
+        routingKey,
+        Buffer.from(JSON.stringify(msgObj)),
+        { persistent: true },
+    );
+
+    if (!success) {
+        throw new Error('Failed to publish message to RabbitMQ');
     }
 }
 

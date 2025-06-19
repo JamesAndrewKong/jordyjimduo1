@@ -9,6 +9,7 @@ services:
       - ./api:/var/www/html
     environment:
       JWT_SECRET: '${JWT_SECRET}'
+      REDIS_URL: '${REDIS_URL}'
       TARGET_SERVICE_URL: 'http://target-service:${TARGET_SERVICE_PORT:-4000}'
       USER_SERVICE_URL: 'http://service-user:${USER_SERVICE_PORT:-3000}'
       IMAGE_SERVICE_URL: 'http://image-service:${IMAGE_SERVICE_PORT:-3000}'
@@ -50,10 +51,12 @@ services:
       - ./Services/AttemptService:/var/www/html
     environment:
       APP_PORT: '${ATTEMPT_SERVICE_PORT:-3000}'
+      REDIS_URL: '${REDIS_URL}'
       DB_URL: 'mongodb://mydatabase:27017/attempts'
       DB_USERNAME: '${DB_USERNAME:-week4username}'
       DB_PASSWORD: '${DB_PASSWORD:-week4password}'
       BROKER_URL: 'amqp://messagebus:5672'
+      JWT_SECRET: '${JWT_SECRET}'
     command: bash -c "npm install && npm run watch"
     restart: unless-stopped
     depends_on:
@@ -70,10 +73,12 @@ services:
       - ./Services/UserService:/var/www/html
     environment:
       APP_PORT: '${USER_SERVICE_PORT:-3000}'
+      REDIS_URL: '${REDIS_URL}'
       DB_URL: 'mongodb://mydatabase:27017/users'
       DB_USERNAME: '${DB_USERNAME:-week4username}'
       DB_PASSWORD: '${DB_PASSWORD:-week4password}'
       BROKER_URL: 'amqp://messagebus:5672'
+      JWT_SECRET: '${JWT_SECRET}'
     command: bash -c "npm install && npm run watch"
     restart: unless-stopped
     depends_on:
@@ -96,6 +101,7 @@ services:
       BROKER_URL: 'amqp://messagebus:5672'
       IMAGGA_EXT_API_KEY: '${IMAGGA_EXT_API_KEY}'
       IMAGGA_EXT_API_SECRET: '${IMAGGA_EXT_API_SECRET}'
+      JWT_SECRET: '${JWT_SECRET}'
     command: bash -c "npm install && npm run watch"
     restart: unless-stopped
     depends_on:
@@ -112,10 +118,12 @@ services:
       - ./Services/TargetService:/var/www/html
     environment:
       APP_PORT: '${TARGET_SERVICE_PORT:-3000}'
+      REDIS_URL: '${REDIS_URL}'
       DB_URL: 'mongodb://mydatabase:27017/targets'
       DB_USERNAME: '${DB_USERNAME:-week4username}'
       DB_PASSWORD: '${DB_PASSWORD:-week4password}'
       BROKER_URL: 'amqp://messagebus:5672'
+      JWT_SECRET: '${JWT_SECRET}'
     command: bash -c "npm install && npm run watch"
     restart: unless-stopped
     depends_on:
@@ -209,6 +217,16 @@ services:
     ports:
       - '${HTTP_MAILHOG_PORT:-8004}:8025'
       - '${SMTP_MAILHOG_PORT:-1025}:1025'
+    restart: unless-stopped
+    networks:
+      - week4network
+
+
+  redis:
+    container_name: redis
+    image: redis:latest
+    ports:
+      - "6379:6379"
     restart: unless-stopped
     networks:
       - week4network

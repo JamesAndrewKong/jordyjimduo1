@@ -1,6 +1,8 @@
 const axios = require('axios');
+const { v4: uuidv4 } = require('uuid');
 const withCircuitBreaker = require('../helpers/circuitBreakerHelper');
 const publishToQueue = require('../helpers/rabbitPublisher');
+const { redisClient, connectRedis } = require('../helpers/redisClient');
 
 class UserService {
     static async getUsers(page, perPage) {
@@ -14,11 +16,37 @@ class UserService {
     }
 
     static async createUser(body) {
+        await connectRedis();
+
+        const correlationId = uuidv4();
+        const redisKey = `user:response:${correlationId}`;
+
         await publishToQueue('user', {
             action: 'create',
             value: body,
+            correlationId,
         });
-        return { message: 'User creation enqueued' };
+
+        const timeout = 10000;
+        const interval = 100;
+        const maxTries = timeout / interval;
+        let tries = 0;
+
+        while (tries < maxTries) {
+            const response = await redisClient.get(redisKey);
+            if (response) {
+                await redisClient.del(redisKey);
+                return JSON.parse(response);
+            }
+
+            await new Promise((res) => setTimeout(res, interval));
+            tries++;
+        }
+
+        return {
+            message: 'User creation enqueued, will be processed when the user service is available.',
+            correlationId,
+        };
     }
 
     static async getTargetsByUser(userId, page, perPage) {
