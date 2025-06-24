@@ -4,8 +4,8 @@ const CircuitBreaker = require('opossum');
 const defaultOptions = {
     timeout: 5000,                  // Na 5 seconden faalt de call
     errorThresholdPercentage: 50,   // Bij 50 procent fouten gaat de breaker "open"
-    resetTimeout: 10000,            // Na 10 seconden probeert hij het opnieuw
-    rollingCountTimeout: 10000,     // houd fouten bij over deze tijd
+    resetTimeout: 10000,            // Na 10 seconde probeert hij het weer opnieuw
+    rollingCountTimeout: 10000,     // hou fouten bij over deze tijd
     rollingCountBuckets: 10,
     volumeThreshold: 5,             // Ppas activeren  bij minimaal 5 requests
 };
@@ -30,7 +30,7 @@ function withCircuitBreaker(fn, options = {}, fallback = null, onError = null) {
         if (onError) onError(err);
     });
 
-    // Als fallback gegeven is, gebruik die
+    // Als fallback gegeven is, gebruik dit hier
     if (fallback) {
         breaker.fallback(fallback);
     }

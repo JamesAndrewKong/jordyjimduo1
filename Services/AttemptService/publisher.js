@@ -1,30 +1,28 @@
 const amqplib = require('amqplib');
 
-let broker = amqplib.connect(process.env.BROKER_URL);
 let channel;
 
-const publish = async (msg, key) => {
+const connect = async () => {
+    if (channel) return channel;
+    const connection = await amqplib.connect(process.env.BROKER_URL);
+    connection.on('error', err => console.error('Publisher connection error:', err));
+    connection.on('close', () => {
+        console.error('Publisher connection closed');
+        channel = null;
+    });
+
+    channel = await connection.createChannel();
+    await channel.assertExchange('EA', 'direct', { durable: true });
+    return channel;
+};
+
+const publish = async (payload, routingKey) => {
     try {
-        let connection;
-        try {
-            connection = await broker;
-        } catch (error) {
-            if (process.env.NODE_ENV === 'test') return;
-
-            console.log('Publisher: Could not connect to broker, retrying in 10 seconds...');
-            broker = amqplib.connect(process.env.BROKER_URL);
-            setTimeout(() => publish(msg, key), 10000);
-            return;
-        }
-
-        if (!channel) {
-            channel = await connection.createChannel();
-            await channel.assertExchange('EA', 'direct', { durable: true });
-        }
-
-        channel.publish('EA', key, Buffer.from(JSON.stringify(msg)));
+        const ch = await connect();
+        const msg = JSON.stringify(payload);
+        ch.publish('EA', routingKey, Buffer.from(msg));
     } catch (error) {
-        console.error(`Publisher: Error publishing message: ${error.message || error}`);
+        console.error('Publisher error:', error);
     }
 };
 
