@@ -2,7 +2,7 @@ const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 const withCircuitBreaker = require('../helpers/circuitBreakerHelper');
 const publishToQueue = require('../helpers/rabbitPublisher');
-const { redisClient, connectRedis } = require('../helpers/redisClient');
+const pollForResponse = require('../helpers/pollForResponse');
 
 class TargetService {
     static async getTargets(page, perPage) {
@@ -21,8 +21,6 @@ class TargetService {
     }
 
     static async createTarget(data) {
-        await connectRedis();
-
         const correlationId = uuidv4();
         const redisKey = `target:response:${correlationId}`;
 
@@ -32,26 +30,14 @@ class TargetService {
             correlationId,
         });
 
-        const timeout = 10000;
-        const interval = 100;
-        const maxTries = timeout / interval;
-        let tries = 0;
+        const response = await pollForResponse({ redisKey });
 
-        while (tries < maxTries) {
-            const response = await redisClient.get(redisKey);
-            if (response) {
-                await redisClient.del(redisKey);
-                return JSON.parse(response);
+        return (
+            response || {
+                message: 'Target creation enqueued, will be processed when the target service is available.',
+                correlationId,
             }
-
-            await new Promise((res) => setTimeout(res, interval));
-            tries++;
-        }
-
-        return {
-            message: 'Target creation enqueued, will be processed when the target service is available.',
-            correlationId,
-        };
+        );
     }
 
     static async deleteTarget(id, userId) {

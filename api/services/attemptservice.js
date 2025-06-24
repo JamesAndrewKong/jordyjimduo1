@@ -2,7 +2,7 @@ const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 const withCircuitBreaker = require('../helpers/circuitBreakerHelper');
 const publishToQueue = require('../helpers/rabbitPublisher');
-const { redisClient, connectRedis } = require('../helpers/redisClient');
+const pollForResponse = require('../helpers/pollForResponse');
 
 async function getAttempts(page, perPage, userId, targetId) {
     const params = { page, perPage };
@@ -24,8 +24,6 @@ async function getTargetById(targetId) {
 }
 
 async function createAttempt(body) {
-    await connectRedis();
-
     const correlationId = uuidv4();
     const redisKey = `attempt:response:${correlationId}`;
 
@@ -35,25 +33,14 @@ async function createAttempt(body) {
         correlationId,
     });
 
-    const timeout = 10000;
-    const interval = 100;
-    const maxTries = timeout / interval;
-    let tries = 0;
+    const response = await pollForResponse({ redisKey });
 
-    while (tries < maxTries) {
-        const response = await redisClient.get(redisKey);
-        if (response) {
-            await redisClient.del(redisKey);
-            return JSON.parse(response);
+    return (
+        response || {
+            message: 'Attempt creation enqueued, will be processed when the attempt service is available.',
+            correlationId,
         }
-        await new Promise((res) => setTimeout(res, interval));
-        tries++;
-    }
-
-    return {
-        message: 'Attempt creation enqueued, will be processed when the attempt service is available.',
-        correlationId,
-    };
+    );
 }
 
 async function deleteAttempt(id, userId, userRole) {
