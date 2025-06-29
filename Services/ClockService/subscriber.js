@@ -1,13 +1,22 @@
-const { redisClient, connectRedis } = require('./helpers/redisClient');
+const amqplib = require('amqplib');
+let channel;
 
 async function startSubscriber() {
-    await connectRedis();
+    const connection = await amqplib.connect(process.env.BROKER_URL || 'amqp://localhost');
+    channel = await connection.createChannel();
+    await channel.assertExchange('EA', 'direct', { durable: true });
 
-    await redisClient.subscribe('register-close', (message) => {
-        console.log('Received register-close event:', message);
+    const q = await channel.assertQueue('', { exclusive: true });
+    await channel.bindQueue(q.queue, 'EA', 'register-close');
+
+    console.log('Subscriber listening on register-close');
+    channel.consume(q.queue, msg => {
+        if (msg) {
+            const message = JSON.parse(msg.content.toString());
+            console.log('Received message:', message);
+            channel.ack(msg);
+        }
     });
-
-    console.log('Subscriber started and listening on register-close');
 }
 
 module.exports = startSubscriber;

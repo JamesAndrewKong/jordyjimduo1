@@ -69,7 +69,7 @@ class ClockService {
             await clockRepo.updateWinner(target._id, winnerId);
             console.log(`[ClockService][UTC ${new Date().toISOString()}] Updated winner for ${target._id}`);
 
-            await this.sendMail(winnerId)
+            await this.sendMail(winnerId);
 
             await publish('register-close', {
                 from: 'clockservice',
@@ -77,6 +77,7 @@ class ClockService {
                 targetId: target._id,
                 winnerId,
             });
+
             console.log(`[ClockService][UTC ${new Date().toISOString()}] Published close event for target ${target._id}`);
         } catch (err) {
             console.error(`[ClockService][UTC ${new Date().toISOString()}] Error processing target ${target._id}:`, err);
@@ -88,16 +89,16 @@ class ClockService {
             host: 'mailhog',
             port: 1025,
             secure: false,
-            auth: null
+            auth: null,
         });
 
         const winner = await clockRepo.getWinnerById(winnerId);
-        console.log(winner)
+        console.log(winner);
         await transporter.sendMail({
             from: '"Contest" <no-reply@contest.com>',
             to: winner.email,
             subject: 'Congratulations! You are the winner!',
-            text: `Hi ${winner.userName},\n\nYou have won the contest!`
+            text: `Hi ${winner.userName},\n\nYou have won the contest!`,
         });
     }
 }

@@ -1,15 +1,18 @@
-const { redisClient, connectRedis } = require('./helpers/redisClient');
+const amqplib = require('amqplib');
+let channel;
 
-async function publish(channel, message) {
-    try {
-        if (!redisClient.isOpen) {
-            await connectRedis();
-        }
-        await redisClient.publish(channel, JSON.stringify(message));
-        console.log(`Published message on channel ${channel}`);
-    } catch (err) {
-        console.error('Redis publish error:', err);
-    }
+async function connect() {
+    if (channel) return channel;
+    const connection = await amqplib.connect(process.env.BROKER_URL || 'amqp://localhost');
+    channel = await connection.createChannel();
+    await channel.assertExchange('EA', 'direct', { durable: true });
+    return channel;
+}
+
+async function publish(routingKey, message) {
+    const ch = await connect();
+    ch.publish('EA', routingKey, Buffer.from(JSON.stringify(message)));
+    console.log(`Published message on ${routingKey}`);
 }
 
 module.exports = publish;
