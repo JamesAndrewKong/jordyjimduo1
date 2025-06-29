@@ -1,5 +1,6 @@
-const targetRepo = require('./repo/targetRepo');
+const clockRepo = require('./repo/clockRepo');
 const publish = require('./publisher');
+const nodemailer = require('nodemailer');
 
 class ClockService {
     constructor() {
@@ -29,7 +30,7 @@ class ClockService {
     async catchUpExpiredTargets() {
         console.log(`[ClockService][UTC ${new Date().toISOString()}] Running catch-up for expired targets...`);
         try {
-            const expiredTargets = await targetRepo.findActiveExpired();
+            const expiredTargets = await clockRepo.findActiveExpired();
             console.log(`[ClockService][UTC ${new Date().toISOString()}] Catch-up found ${expiredTargets.length} expired target(s)`);
 
             for (const target of expiredTargets) {
@@ -44,7 +45,7 @@ class ClockService {
     async checkExpiredTargets() {
         console.log(`[ClockService][UTC ${new Date().toISOString()}] Checking for expired targets...`);
         try {
-            const expiredTargets = await targetRepo.findActiveExpired();
+            const expiredTargets = await clockRepo.findActiveExpired();
             console.log(`[ClockService][UTC ${new Date().toISOString()}] Found ${expiredTargets.length} expired target(s)`);
 
             for (const target of expiredTargets) {
@@ -59,14 +60,16 @@ class ClockService {
     async processTarget(target) {
         try {
             console.log(`[ClockService][UTC ${new Date().toISOString()}] Closing target ${target._id}...`);
-            await targetRepo.closeTarget(target._id);
+            await clockRepo.closeTarget(target._id);
             console.log(`[ClockService][UTC ${new Date().toISOString()}] Closed target ${target._id}`);
 
-            const winnerId = await this.calculateWinner(target._id);
+            const winnerId = await clockRepo.calculateWinner(target._id);
             console.log(`[ClockService][UTC ${new Date().toISOString()}] Calculated winner for ${target._id}: ${winnerId}`);
 
-            await targetRepo.updateWinner(target._id, winnerId);
+            await clockRepo.updateWinner(target._id, winnerId);
             console.log(`[ClockService][UTC ${new Date().toISOString()}] Updated winner for ${target._id}`);
+
+            await this.sendMail(winnerId)
 
             await publish('register-close', {
                 from: 'clockservice',
@@ -80,10 +83,22 @@ class ClockService {
         }
     }
 
-    async calculateWinner(targetId) {
-        // hier komt iets later met attempts scores vergleijken
-        return 'dummy-winner-id';
+    async sendMail(winnerId) {
+       const transporter = nodemailer.createTransport({
+            host: 'mailhog',
+            port: 1025,
+            secure: false,
+            auth: null
+        });
+
+        const winner = clockRepo.getWinnerById(winnerId);
+
+        await transporter.sendMail({
+            from: '"Contest" <no-reply@contest.com>',
+            to: winner.email,
+            subject: 'Congratulations! You are the winner!',
+            text: `Hi ${winner.name.first},\n\nYou have won the contest!`
+        });
     }
 }
-
 module.exports = new ClockService();

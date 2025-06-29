@@ -10,3 +10,5 @@ if (process.env.NODE_ENV !== 'test') {
 
 // Models
 require('./models/target');
+require('./models/attempt');
+require('./models/user');
