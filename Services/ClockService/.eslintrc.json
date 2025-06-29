@@ -1,0 +1,27 @@
+{
+    "env": {
+        "browser": true,
+        "commonjs": true,
+        "es2021": true,
+        "jest": true,
+        "node": true
+    },
+    "extends": "eslint:recommended",
+    "parserOptions": {
+        "ecmaVersion": "latest"
+    },
+    "rules": {
+        "comma-dangle": ["error", "always-multiline"],
+
+        "eol-last": "error",
+
+        "no-multiple-empty-lines": ["error", {"max": 1, "maxEOF": 0}],
+        "no-trailing-spaces": "warn",
+        "no-undef": "off",
+        "no-unused-vars": "warn",
+
+        "quotes": ["error", "single"],
+
+        "semi": "error"
+    }
+}

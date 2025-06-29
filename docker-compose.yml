@@ -64,6 +64,28 @@ services:
       - mydatabase
     networks:
       - week4network
+      
+  clock-service:
+    container_name: 'service-clock'
+    image: node:20.11.1
+    working_dir: /var/www/html
+    volumes:
+      - ./Services/ClockService:/var/www/html
+    environment:
+      APP_PORT: '${CLOCK_SERVICE_PORT:-3000}'
+      REDIS_URL: '${REDIS_URL}'
+      DB_URL: 'mongodb://mydatabase:27017/targets'
+      DB_USERNAME: '${DB_USERNAME:-week4username}'
+      DB_PASSWORD: '${DB_PASSWORD:-week4password}'
+      BROKER_URL: 'amqp://messagebus:5672'
+      JWT_SECRET: '${JWT_SECRET}'
+    command: bash -c "npm install && npm run watch"
+    restart: unless-stopped
+    depends_on:
+      - messagebus
+      - mydatabase
+    networks:
+      - week4network
 
   user-service:
     container_name: 'service-user'

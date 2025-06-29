@@ -34,7 +34,6 @@ app.get('/targets', async (req, res, next) => {
         const options = {};
         if (req.query.userId) options.userId = req.query.userId;
 
-        // Simulatie van .byPage()
         const page = parseInt(req.query.page, 10) || 1;
         const perPage = parseInt(req.query.perPage, 10) || 10;
         const skip = (page - 1) * perPage;
@@ -72,6 +71,9 @@ app.get('/targets/location/:location', async (req, res, next) => {
 app.post('/targets', async (req, res, next) => {
     if (!req.body.image) {
         return res.status(422).json({ message: 'Image cannot be null' });
+    }
+    if (!req.body.deadline) {
+        return res.status(422).json({ message: 'Deadline cannot be null' });
     }
 
     try {
