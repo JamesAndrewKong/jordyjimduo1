@@ -91,13 +91,13 @@ class ClockService {
             auth: null
         });
 
-        const winner = clockRepo.getWinnerById(winnerId);
-
+        const winner = await clockRepo.getWinnerById(winnerId);
+        console.log(winner)
         await transporter.sendMail({
             from: '"Contest" <no-reply@contest.com>',
             to: winner.email,
             subject: 'Congratulations! You are the winner!',
-            text: `Hi ${winner.name.first},\n\nYou have won the contest!`
+            text: `Hi ${winner.userName},\n\nYou have won the contest!`
         });
     }
 }

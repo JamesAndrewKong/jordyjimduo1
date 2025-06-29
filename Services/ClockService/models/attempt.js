@@ -1,12 +1,11 @@
 const mongoose = require('mongoose');
-
+const { attemptConn } = require('../dbConnections');
+ 
 const AttemptSchema = new mongoose.Schema({
-    imageId: String,
-    score: Number,
-    targetId: String,
-    userId: String,
+  imageId: String,
+  score: Number,
+  targetId: String,
+  userId: String,
 });
-
-const Attempt = mongoose.model('Attempt', AttemptSchema);
-
-module.exports = Attempt;
+ 
+module.exports = attemptConn.model('Attempt', AttemptSchema);
