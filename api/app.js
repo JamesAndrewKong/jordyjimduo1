@@ -17,23 +17,6 @@ const metricsMiddleware = promBundle({
 });
 const app = express();
 
-// //Prometheus Metrics Setup
-// const registry = new prometheus.Registry();
-// prometheus.collectDefaultMetrics({ register: registry });
-// const httpRequestCounter = new prometheus.Counter({
-//   name: 'http_requests_total',
-//   help: 'Total number of HTTP requests',
-//   labelNames: ['method', 'status'],
-//   registers: [registry],
-// });
-
-// //Middleware for Prometheus Metrics
-// app.use((req, res, next) => {
-//   httpRequestCounter.labels(req.method, res.statusCode).inc();
-//   next();
-// });
-
-//require('./vendors/mongoose');
 require('./vendors/passportJWT');
 
 app.use(passport.initialize());
@@ -42,8 +25,6 @@ app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
-
-//app.set('view engine', 'json');
 app.use(metricsMiddleware);
 
 const jwtToken = passport.authenticate('jwt', { session: false });

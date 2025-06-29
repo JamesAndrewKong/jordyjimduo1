@@ -1,39 +1,32 @@
 const express = require('express');
 const router = express.Router();
-const axios = require('axios');
+const userService = require('../services/userservice');
 const paginate = require('../helpers/paginatedResponse');
 const createError = require('http-errors');
 
 router.get('/', async (req, res, next) => {
-    axios.get(`${process.env.USER_SERVICE_URL}/users`, {
-        params: {
-            page: req.query.page,
-            perPage: req.query.perPage,
-        },
-    })
-        .then(response => res.json(paginate(response.data, req)))
-        .catch(next);
+    try {
+        const data = await userService.getUsers(req.query.page, req.query.perPage);
+        res.json(paginate(data, req));
+    } catch (error) {
+        next(error);
+    }
 });
 
-router.get('/:id', (req, res, next) => {
-    axios.get(`${process.env.USER_SERVICE_URL}/users/${req.params.id}`)
-        .then(response => res.json(response.data))
-        .catch(next);
+router.get('/:id', async (req, res, next) => {
+    try {
+        const data = await userService.getUserById(req.params.id);
+        res.json(data);
+    } catch (error) {
+        next(error);
+    }
 });
 
 router.get('/targets/:id', async (req, res, next) => {
     try {
-        const {data} = await axios.get(`${process.env.USER_SERVICE_URL}/users/${req.params.id}`);
-
-        axios.get(`${process.env.TARGET_SERVICE_URL}/targets`, {
-            params: {
-                userId: data._id,
-                page: req.query.page,
-                perPage: req.query.perPage,
-            },
-        })
-            .then(response => res.json(paginate(response.data, req)))
-            .catch(next);
+        const user = await userService.getUserById(req.params.id);
+        const targets = await userService.getTargetsByUser(user._id, req.query.page, req.query.perPage);
+        res.json(paginate(targets, req));
     } catch (error) {
         next(createError('User not found', 404));
     }
@@ -41,28 +34,21 @@ router.get('/targets/:id', async (req, res, next) => {
 
 router.get('/attempts/:id', async (req, res, next) => {
     try {
-        const {data} = await axios.get(`${process.env.USER_SERVICE_URL}/users/${req.params.id}`);
-
-        axios.get(`${process.env.ATTEMPT_SERVICE_URL}/attempts?userId=${data._id}`, {
-            params: {
-                page: req.query.page,
-                perPage: req.query.perPage,
-            },
-        })
-            .then(response => res.json(paginate(response.data, req)))
-            .catch(next);
+        const user = await userService.getUserById(req.params.id);
+        const attempts = await userService.getAttemptsByUser(user._id, req.query.page, req.query.perPage);
+        res.json(paginate(attempts, req));
     } catch (error) {
         next(createError('User not found', 404));
     }
 });
 
 router.post('/', async (req, res, next) => {
-    axios.post(`${process.env.USER_SERVICE_URL}/users`, req.body)
-        .then(response => {
-            res.status(201);
-            res.json(response.data);
-        })
-        .catch(() => next(createError(422, 'Could not create user')));
+    try {
+        const newUser = await userService.createUser(req.body);
+        res.status(201).json(newUser);
+    } catch (error) {
+        next(createError(422, 'Could not create user'));
+    }
 });
 
 module.exports = router;

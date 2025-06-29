@@ -1,58 +1,26 @@
 const Attempt = require('../models/attempt');
-const PayLoadCreator = require('./payloadCreator');
-const pub = require('../publisher');
 
-class TargetRepo{
-    create(value) { return new Promise((resolve, reject) => {
-        const target = new Attempt(value);
-        target.save()
-            .then(savedValue =>{
-                if(savedValue){
-                    resolve(savedValue);
-                    return;
-                }
-            }).catch(async err => {
-            reject(err);
-        });
-    });
-    }
+class AttemptRepo {
+    async create(value) {
+        try {
+            if (!value.image) {
+                throw new Error('Image cannot be null');
+            }
 
-    async deleteOne(value) {
-        return new Promise((resolve, reject) => {
-            Attempt.deleteOne({_id: value})
-                .then(resolve).catch(reject);
-        });
-    }
+            const attempt = new Attempt(value);
+            const saved = await attempt.save();
 
-    async deleteMany(value) {
-        console.log(value);
-        const attempts = Attempt.find({targetId: value.id});
-
-        for (const attempt in attempts) {
-            const payloadCreator = new PayLoadCreator('delete', '', '', attempt.imageId);
-            let message = payloadCreator.getPayload();
-            pub(message, 'image');
+            return {
+                status: 'success',
+                data: saved,
+            };
+        } catch (err) {
+            return {
+                status: 'fail',
+                message: err.message || 'Unknown error while saving attempt',
+            };
         }
-
-        return new Promise((resolve, reject) => {
-            Attempt.deleteMany({targetId: value.id})
-                .then(()=>{
-                    resolve();
-                }).catch((err)=>{
-                reject(err);
-            });
-        });
-    }
-
-    update(value) {return new Promise((resolve, reject) => {
-        Attempt.updateOne({_id: value.callerId}, {imageId: value.imageId, score: value.score}, {runValidators: true})
-            .then(()=>{
-                resolve();
-            }).catch((err)=>{
-            reject(err);
-        });
-    });
     }
 }
 
-module.exports = new TargetRepo();
+module.exports = new AttemptRepo();

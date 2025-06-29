@@ -1,53 +1,47 @@
 const express = require('express');
 const router = express.Router();
-const axios = require('axios');
+const attemptService = require('../services/attemptservice');
 const paginate = require('../helpers/paginatedResponse');
 const createError = require('http-errors');
 
 router.get('/', async (req, res, next) => {
-    axios.get(`${process.env.ATTEMPT_SERVICE_URL}/attempts`, {
-        params: {
-            page: req.query.page,
-            perPage: req.query.perPage,
-        },
-    })
-        .then(response => res.json(paginate(response.data, req)))
-        .catch(next);
+    try {
+        const data = await attemptService.getAttempts(req.query.page, req.query.perPage, req.query.userId, req.query.targetId);
+        res.json(paginate(data, req));
+    } catch (error) {
+        next(error);
+    }
 });
 
-router.get('/:id', (req, res, next) => {
-    axios.get(`${process.env.ATTEMPT_SERVICE_URL}/attempts/${req.params.id}`)
-        .then(response => res.json(response.data))
-        .catch(next);
+router.get('/:id', async (req, res, next) => {
+    try {
+        const data = await attemptService.getAttemptById(req.params.id);
+        res.json(data);
+    } catch (error) {
+        next(error);
+    }
 });
 
 router.post('/', async (req, res, next) => {
     try {
-        const {data} = await axios.get(`${process.env.TARGET_SERVICE_URL}/targets/${req.body.targetId}`);
-
+        const target = await attemptService.getTargetById(req.body.targetId);
         req.body.userId = req.user._id;
-        req.body.targetImageId = data.imageId;
+        req.body.targetImageId = target.imageId;
 
-        axios.post(`${process.env.ATTEMPT_SERVICE_URL}/attempts`, req.body)
-            .then(response => res.status(201).json(response.data))
-            .catch(next);
+        const created = await attemptService.createAttempt(req.body);
+        res.status(201).json(created);
     } catch (error) {
         next(createError('Target not found', 404));
     }
 });
 
-router.delete('/:id', (req, res, next) => {
-    axios.delete(`${process.env.ATTEMPT_SERVICE_URL}/attempts/${req.params.id}`, {
-        data: {
-            userId: req.user._id,
-            userRole: req.user.role,
-        },
-    })
-        .then(response => {
-            res.status(201);
-            res.json(response.data);
-        })
-        .catch(next);
+router.delete('/:id', async (req, res, next) => {
+    try {
+        const result = await attemptService.deleteAttempt(req.params.id, req.user._id, req.user.role);
+        res.status(201).json(result);
+    } catch (error) {
+        next(error);
+    }
 });
 
 module.exports = router;

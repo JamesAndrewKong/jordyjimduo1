@@ -1,121 +1,126 @@
 const express = require('express');
+const http = require('http');
+const logger = require('morgan');
+const promBundle = require('express-prom-bundle');
+
 const Target = require('./models/target');
 const paginate = require('./helpers/paginatedResponse');
 const repo = require('./repo/targetRepo');
 const PayLoadCreator = require('./repo/payloadCreator');
 const pub = require('./publisher');
-const sub = require('./subscriber');
-const promBundle = require('express-prom-bundle');
+
+require('./database');
+const startSubscriber = require('./subscriber');
+startSubscriber();
+
+const app = express();
 
 const metricsMiddleware = promBundle({
     includePath: true,
     includeStatusCode: true,
-    normalizePath: true,
+    normalizePath: (req) => req.route?.path || req.path,
     promClient: {
         collectDefaultMetrics: {},
     },
 });
-const app = express();
-
-require('./database');
-const logger = require('morgan');
-const http = require('http');
 
 app.use(logger('dev'));
 app.use(express.json());
-app.use(express.urlencoded({extended: false}));
-
+app.use(express.urlencoded({ extended: false }));
 app.use(metricsMiddleware);
 
 app.get('/targets', async (req, res, next) => {
-    const options = {};
-    if (req.query.userId) options.userId = req.query.userId;
-
-    const result = Target.find(options).byPage(req.query.page, req.query.perPage);
-
-    const count = await Target.find(options).count();
-
-    result.then(data => res.json(paginate(data, count, req)))
-        .catch(next);
-});
-
-app.get('/targets/:id', (req, res, next) => {
-    const result = Target.findById(req.params.id);
-
-    result.then(data => res.json(data))
-        .catch(next);
-});
-
-app.get('/targets/location/:location', async (req, res, next) => {
-    Target.find({ location: req.params.location })
-        .then(targets => res.status(200).json(targets))
-        .catch(next);
-  });
-
-app.post('/targets', async (req, res, next) => {
-    let orgValue = req.body;
-    let result;
-
-    if (!orgValue.image) {
-        return res.status(422).json({message: 'Image cannot be null'});
-    }
-
     try {
-        result = await repo.create(orgValue);
-        res.status(201).json(result);
+        const options = {};
+        if (req.query.userId) options.userId = req.query.userId;
+
+        const page = parseInt(req.query.page, 10) || 1;
+        const perPage = parseInt(req.query.perPage, 10) || 10;
+        const skip = (page - 1) * perPage;
+
+        const [data, count] = await Promise.all([
+            Target.find(options).skip(skip).limit(perPage).exec(),
+            Target.countDocuments(options).exec(),
+        ]);
+
+        res.json(paginate(data, count, req));
     } catch (err) {
         next(err);
     }
+});
+
+app.get('/targets/:id', async (req, res, next) => {
+    try {
+        const target = await Target.findById(req.params.id).exec();
+        if (!target) return res.status(404).json({ message: 'Target not found' });
+        res.json(target);
+    } catch (err) {
+        next(err);
+    }
+});
+
+app.get('/targets/location/:location', async (req, res, next) => {
+    try {
+        const targets = await Target.find({ location: req.params.location }).exec();
+        res.json(targets);
+    } catch (err) {
+        next(err);
+    }
+});
+
+app.post('/targets', async (req, res, next) => {
+    if (!req.body.image) {
+        return res.status(422).json({ message: 'Image cannot be null' });
+    }
+    if (!req.body.deadline) {
+        return res.status(422).json({ message: 'Deadline cannot be null' });
+    }
 
     try {
-        const payloadCreator = new PayLoadCreator('create', result._id, orgValue.image);
-        let value = payloadCreator.getPayload();
-        pub(value, 'image');
+        const createdTarget = await repo.create(req.body);
+
+        await pub(new PayLoadCreator('create', createdTarget._id, req.body.image).getPayload(), 'image');
+
+        res.status(202).json({ message: 'Target creation enqueued' });
     } catch (err) {
-        pub({from: 'target-service_index', error: err}, 'report');
+        next(err);
     }
 });
 
 app.delete('/targets/:id', async (req, res, next) => {
     try {
-        const target = await Target.findById(req.params.id);
+        const target = await Target.findById(req.params.id).exec();
+        if (!target) return res.status(404).json({ message: 'Target not found' });
 
         if (target.userId !== req.body.userId) {
-            return res.status(422).json({message: 'Can\'t delete target, it\'s not yours.'});
+            return res.status(422).json({ message: 'Can\'t delete target, it\'s not yours.' });
         }
 
-        const payloadCreator = new PayLoadCreator('delete', target._id, target.imageId);
-        let value = payloadCreator.getPayload();
-        pub(value, 'image');
+        const payloads = [
+            new PayLoadCreator('delete', target._id, target.imageId).getPayload(),
+            new PayLoadCreator('deleteMany', target._id, '').getPayload(),
+        ];
 
-        const payloadCreator2 = new PayLoadCreator('deleteMany', target._id, '');
-        let value2 = payloadCreator2.getPayload();
-        pub(value2, 'attempt');
+        await Promise.all(payloads.map(p => pub(p, 'image')));
+        const result = await repo.delete(target._id);
 
-        let result = await repo.delete(target._id);
-        res.status(201);
         res.json(result);
     } catch (err) {
         next(err);
     }
 });
 
-// error handler
-// eslint-disable-next-line no-unused-vars
-app.use((err, req, res, next) => {
-    pub({from: 'target-service_index', error: err}, 'report');
-
-    res.status(err.status || 500);
-    res.json(err);
+app.use((err, req, res) => {
+    pub({ from: 'target-service_index', error: err.message || err }, 'report');
+    res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
 });
 
 if (process.env.NODE_ENV !== 'test') {
-    app.set('port', process.env.APP_PORT || 3000);
+    const port = process.env.APP_PORT || 3000;
+    app.set('port', port);
 
     const server = http.createServer(app);
-    const port = process.env.APP_PORT || 3000;
-
-    server.listen(port, () => console.log(`Listening on port ${port}`));
+    server.listen(port, () => console.log(`Target service listening on port ${port}`));
 }
 
 module.exports = app;

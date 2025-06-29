@@ -1,31 +1,22 @@
 const amqplib = require('amqplib');
 
-let broker = amqplib.connect(process.env.BROKER_URL);
 let channel;
 
-const publish = async function(msg, key){
+const connect = async () => {
+    if (channel) return channel;
+    const connection = await amqplib.connect(process.env.BROKER_URL);
+    channel = await connection.createChannel();
+    await channel.assertExchange('EA', 'direct', { durable: true });
+    return channel;
+};
+
+const publish = async (payload, routingKey) => {
     try {
-        let connection;
-        try {
-            connection = await broker;
-        } catch (error) {
-            if (process.env.NODE_ENV === 'test') return;
-
-            console.log('Could not make queue connection, retrying in 10 seconds...');
-            broker = amqplib.connect(process.env.BROKER_URL);
-            setTimeout(() => publish(msg, key), 10000);
-            return;
-        }
-
-        if(channel === undefined){
-            channel = await connection.createChannel();
-        }
-
-        await channel.assertExchange('EA', 'direct', {durable: true});
-
-        channel.publish('EA', key, Buffer.from(JSON.stringify(msg)));
-    }catch (error) {
-        console.log(`Error in publisher : ${error}`);
+        const ch = await connect();
+        const msg = JSON.stringify(payload);
+        ch.publish('EA', routingKey, Buffer.from(msg));
+    } catch (error) {
+        console.error('Publisher error:', error);
     }
 };
 
