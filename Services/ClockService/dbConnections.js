@@ -1,20 +1,18 @@
+require('dotenv').config();
 const mongoose = require('mongoose');
- 
-const targetConn = mongoose.createConnection('mongodb://localhost:27017/Target', {
+
+const mongoOptions = {
+  authSource: 'admin',
+  user: process.env.DB_USERNAME,
+  pass: process.env.DB_PASSWORD,
   useNewUrlParser: true,
   useUnifiedTopology: true,
-});
- 
-const attemptConn = mongoose.createConnection('mongodb://localhost:27017/Attempt', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
- 
-const userConn = mongoose.createConnection('mongodb://localhost:27017/User', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
- 
+};
+
+const targetConn = mongoose.createConnection(process.env.DB_TARGET_URL, mongoOptions);
+const attemptConn = mongoose.createConnection(process.env.DB_ATTEMPT_URL, mongoOptions);
+const userConn = mongoose.createConnection(process.env.DB_USER_URL, mongoOptions);
+
 module.exports = {
   targetConn,
   attemptConn,

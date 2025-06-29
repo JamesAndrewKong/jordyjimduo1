@@ -74,7 +74,9 @@ services:
     environment:
       APP_PORT: '${CLOCK_SERVICE_PORT:-3000}'
       REDIS_URL: '${REDIS_URL}'
-      DB_URL: 'mongodb://mydatabase:27017/targets'
+      DB_TARGET_URL: 'mongodb://mydatabase:27017/targets'
+      DB_ATTEMPT_URL: 'mongodb://mydatabase:27017/attempts'
+      DB_USER_URL: 'mongodb://mydatabase:27017/users'
       DB_USERNAME: '${DB_USERNAME:-week4username}'
       DB_PASSWORD: '${DB_PASSWORD:-week4password}'
       BROKER_URL: 'amqp://messagebus:5672'
@@ -86,6 +88,7 @@ services:
       - mydatabase
     networks:
       - week4network
+
 
   user-service:
     container_name: 'service-user'

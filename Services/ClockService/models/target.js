@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const { targetConn } = require('../dbConnections');
- 
+
 const TargetSchema = new mongoose.Schema({
   userId: String,
   imageId: String,
@@ -9,5 +9,6 @@ const TargetSchema = new mongoose.Schema({
   winnerId: String,
   createdAt: { type: Date, default: Date.now },
 });
- 
-module.exports = targetConn.model('Target', TargetSchema)
+
+module.exports = targetConn.model('Target', TargetSchema);
+
